@@ -6,12 +6,12 @@ const VERSION: &str = env!("CARGO_PKG_VERSION");
 pub struct Editor {
     should_quit: bool,
     terminal: Terminal,
-    cur_position:Position,
+    cur_position: Position,
 }
 
-pub struct Position{
-    pub x:usize,
-    pub y:usize,
+pub struct Position {
+    pub x: usize,
+    pub y: usize,
 }
 
 impl Editor {
@@ -38,14 +38,13 @@ impl Editor {
 
     fn refresh_screen(&self) -> Result<(), std::io::Error> {
         Terminal::cursor_hide();
-        Terminal::cursor_position(&Position{x:0,y:0});
+        Terminal::cursor_position(&Position { x: 0, y: 0 });
         if self.should_quit {
             Terminal::clear_screen();
             println!("Goodbye.\r");
         } else {
             self.draw_rows();
             Terminal::cursor_position(&self.cur_position);
-
         }
         Terminal::cursor_show();
         Terminal::flush()
@@ -54,32 +53,44 @@ impl Editor {
         let pressed_key = Terminal::read_key()?;
         match pressed_key {
             Key::Ctrl('q') => self.should_quit = true,
-            Key::Up |Key::Down| Key::Left | Key::Right => self.move_cursor(pressed_key),
+            Key::Up 
+            | Key::Down 
+            | Key::Left 
+            | Key::Right
+            | Key::PageDown
+            | Key::PageUp
+            | Key::End
+            | Key::Home
+            => self.move_cursor(pressed_key),
             _ => (),
         }
         Ok(())
     }
-    fn move_cursor(&mut self,key: Key){
+    fn move_cursor(&mut self, key: Key) {
         let Position { mut x, mut y } = self.cur_position;
         let size = self.terminal.size();
         let height = size.height.saturating_sub(1) as usize;
         let width = size.width.saturating_sub(1) as usize;
-        match key{
+        match key {
             Key::Up => y = y.saturating_sub(1),
-            Key::Down =>{
-                if y< height{
+            Key::Down => {
+                if y < height {
                     y = y.saturating_add(1);
                 }
             }
             Key::Left => x = x.saturating_sub(1),
             Key::Right => {
-                if x < width{
+                if x < width {
                     x = x.saturating_add(1);
                 }
             }
-            _=>(),
+            Key::PageUp => y =0,
+            Key::PageDown => y = height,
+            Key::Home => x = 0,
+            Key::End => x = width,
+            _ => (),
         }
-        self.cur_position = Position{x,y}
+        self.cur_position = Position { x, y }
     }
     fn draw_welcome_message(&self) {
         let mut welcome_message = format!("Hecto editor -- version {}", VERSION);
@@ -106,5 +117,5 @@ impl Editor {
 
 fn die(e: std::io::Error) {
     Terminal::clear_screen();
-    panic!("{}",e);
+    panic!("{}", e);
 }
