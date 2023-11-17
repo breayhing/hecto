@@ -7,7 +7,7 @@ pub struct Document {
 }
 
 impl Document {
-  pub fn open(filename: &str ) -> Result<Self, std::io::Error> {
+    pub fn open(filename: &str ) -> Result<Self, std::io::Error> {
         let contents = fs::read_to_string(filename)?;
         let mut rows = Vec::new();
         for value in contents.lines() {
@@ -16,6 +16,9 @@ impl Document {
         Ok(Self{
             rows
         })
+    }
+    pub fn len(&self) -> usize{
+        self.rows.len()
     }
     pub fn row(&self, index: usize) -> Option<&Row> {
         self.rows.get(index)
