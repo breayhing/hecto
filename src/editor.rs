@@ -1,8 +1,8 @@
 use crate::Document;
 use crate::Row;
 use crate::Terminal;
-use termion::event::Key;
 use std::env;
+use termion::event::Key;
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 
@@ -17,7 +17,7 @@ pub struct Editor {
     terminal: Terminal,
     cursor_position: Position,
     document: Document,
-    offset:Position,
+    offset: Position,
 }
 
 impl Editor {
@@ -35,11 +35,11 @@ impl Editor {
         }
     }
     pub fn default() -> Self {
-        let args:Vec<String> = env::args().collect();
-        let document = if args.len()>1{
+        let args: Vec<String> = env::args().collect();
+        let document = if args.len() > 1 {
             let file_name = &args[1];
             Document::open(&file_name).unwrap_or_default()
-        }else {
+        } else {
             Document::default()
         };
         Self {
@@ -47,7 +47,7 @@ impl Editor {
             terminal: Terminal::default().expect("Failed to initialize terminal"),
             document,
             cursor_position: Position::default(),
-            offset:Position::default(),
+            offset: Position::default(),
         }
     }
 
@@ -60,7 +60,7 @@ impl Editor {
         } else {
             self.draw_rows();
             // Terminal::cursor_position(&self.cursor_position);
-            Terminal::cursor_position(&Position { 
+            Terminal::cursor_position(&Position {
                 x: self.cursor_position.x.saturating_sub(self.offset.x),
                 y: self.cursor_position.y.saturating_sub(self.offset.y),
             })
@@ -85,19 +85,19 @@ impl Editor {
         self.scroll();
         Ok(())
     }
-    fn scroll(&mut self){
+    fn scroll(&mut self) {
         let Position { x, y } = self.cursor_position;
         let width = self.terminal.size().width as usize;
         let height = self.terminal.size().height as usize;
         let mut offset = &mut self.offset;
-        if y<offset.y{
+        if y < offset.y {
             offset.y = y;
-        }else if y>= offset.y.saturating_add(height){
+        } else if y >= offset.y.saturating_add(height) {
             offset.y = y.saturating_sub(height).saturating_add(1);
         }
-        if x<offset.x{
+        if x < offset.x {
             offset.x = x;
-        } else if x>= offset.x.saturating_add(width){
+        } else if x >= offset.x.saturating_add(width) {
             offset.x = x.saturating_sub(width).saturating_add(1)
         }
     }
@@ -105,9 +105,9 @@ impl Editor {
         let terminal_height = self.terminal.size().height as usize;
         let Position { mut y, mut x } = self.cursor_position;
         let height = self.document.len();
-        let mut width = if let Some(row) = self.document.row(y){
+        let mut width = if let Some(row) = self.document.row(y) {
             row.len()
-        }else{
+        } else {
             0
         };
         match key {
@@ -118,33 +118,36 @@ impl Editor {
                 }
             }
             Key::Left => {
-                if x>0{
-                    x -=1
-                }else if y>0{
-                    y-=1;
-                    if let Some(row) = self.document.row(y){
+                if x > 0 {
+                    x -= 1
+                } else if y > 0 {
+                    y -= 1;
+                    if let Some(row) = self.document.row(y) {
                         x = row.len()
-                    }else{
-                        x =0
+                    } else {
+                        x = 0
                     }
                 }
             }
             Key::Right => {
                 if x < width {
-                    x = x.saturating_add(1);
+                    x += 1;
+                } else if y < height {
+                    y += 1;
+                    x = 0;
                 }
             }
             Key::PageUp => {
-                y = if y>terminal_height{
-                    y-terminal_height
-                }else{
+                y = if y > terminal_height {
+                    y - terminal_height
+                } else {
                     0
                 }
             }
             Key::PageDown => {
-                y = if y.saturating_add(terminal_height)<height{
-                    y+terminal_height as usize
-                } else{
+                y = if y.saturating_add(terminal_height) < height {
+                    y + terminal_height as usize
+                } else {
                     height
                 }
             }
@@ -152,12 +155,12 @@ impl Editor {
             Key::End => x = width,
             _ => (),
         }
-        width = if let Some(row) = self.document.row(y){
+        width = if let Some(row) = self.document.row(y) {
             row.len()
-        } else{
+        } else {
             0
         };
-        if x>width{
+        if x > width {
             x = width;
         }
         self.cursor_position = Position { x, y }
@@ -173,10 +176,9 @@ impl Editor {
         println!("{}\r", welcome_message);
     }
     pub fn draw_row(&self, row: &Row) {
-
         let width = self.terminal.size().width as usize;
         let start = self.offset.x;
-        let end = self.offset.x+width;
+        let end = self.offset.x + width;
         let row = row.render(start, end);
         println!("{}\r", row)
     }
@@ -184,7 +186,7 @@ impl Editor {
         let height = self.terminal.size().height;
         for terminal_row in 0..height - 1 {
             Terminal::clear_current_line();
-            if let Some(row) = self.document.row(terminal_row as usize+self.offset.y) {
+            if let Some(row) = self.document.row(terminal_row as usize + self.offset.y) {
                 self.draw_row(row);
             } else if self.document.is_empty() && terminal_row == height / 3 {
                 self.draw_welcome_message();
@@ -197,5 +199,5 @@ impl Editor {
 
 fn die(e: std::io::Error) {
     Terminal::clear_screen();
-    panic!("{}",e);
+    panic!("{}", e);
 }
