@@ -3,14 +3,14 @@ use unicode_segmentation::UnicodeSegmentation;
 
 pub struct Row {
     string: String,
-    len:usize,
+    len: usize,
 }
 
 impl From<&str> for Row {
     fn from(slice: &str) -> Self {
-        let mut row = Self{
+        let mut row = Self {
             string: String::from(slice),
-            len:0,
+            len: 0,
         };
         row.update_len();
         row
@@ -27,7 +27,11 @@ impl Row {
             .skip(start)
             .take(end - start)
         {
-            result.push_str(grapheme);
+            if grapheme == "\t" {
+                result.push_str(" ");
+            } else {
+                result.push_str(grapheme);
+            }
         }
         result
     }
@@ -37,7 +41,7 @@ impl Row {
     pub fn is_empty(&self) -> bool {
         self.string.is_empty()
     }
-    fn update_len(&mut self){
+    fn update_len(&mut self) {
         self.len = self.string[..].graphemes(true).count();
     }
 }
