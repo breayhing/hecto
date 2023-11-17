@@ -56,7 +56,7 @@ impl Editor {
     }
     pub fn default() -> Self {
         let args: Vec<String> = env::args().collect();
-        let mut initial_statue = String::from("HELP:Ctrl-Q = quit");
+        let mut initial_statue = String::from("HELP:Ctrl-Q = quit|Ctrl-S =save");
         let document = if args.len() > 1 {
             let file_name = &args[1];
             let doc = Document::open(&file_name);
@@ -111,6 +111,14 @@ impl Editor {
                 if self.cursor_position.x >0 ||self.cursor_position.y >0{
                     self.move_cursor(Key::Left);
                     self.document.delete(&self.cursor_position);
+                }
+            }
+            Key::Ctrl('s')=>{
+                if self.document.save().is_ok(){
+                    self.status_message =
+                        StatusMessage::from("File saved successfully".to_string());
+                } else{
+                    self.status_message = StatusMessage::from("Error writing file".to_string());
                 }
             }
             Key::Up
