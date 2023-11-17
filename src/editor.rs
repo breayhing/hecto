@@ -2,8 +2,11 @@ use crate::Document;
 use crate::Row;
 use crate::Terminal;
 use std::env;
+use termion::color;
 use termion::event::Key;
 
+const STATUS_FG_COLOR: color::Rgb = color::Rgb(63, 63, 63);
+const STATUS_BG_COLOR: color::Rgb = color::Rgb(239, 239, 239);
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 #[derive(Default)]
@@ -16,8 +19,8 @@ pub struct Editor {
     should_quit: bool,
     terminal: Terminal,
     cursor_position: Position,
-    document: Document,
     offset: Position,
+    document: Document,
 }
 
 impl Editor {
@@ -42,6 +45,7 @@ impl Editor {
         } else {
             Document::default()
         };
+
         Self {
             should_quit: false,
             terminal: Terminal::default().expect("Failed to initialize terminal"),
@@ -59,11 +63,12 @@ impl Editor {
             println!("Goodbye.\r");
         } else {
             self.draw_rows();
-            // Terminal::cursor_position(&self.cursor_position);
+            self.draw_status_bar();
+            self.draw_message_bar();
             Terminal::cursor_position(&Position {
                 x: self.cursor_position.x.saturating_sub(self.offset.x),
                 y: self.cursor_position.y.saturating_sub(self.offset.y),
-            })
+            });
         }
         Terminal::cursor_show();
         Terminal::flush()
@@ -98,7 +103,7 @@ impl Editor {
         if x < offset.x {
             offset.x = x;
         } else if x >= offset.x.saturating_add(width) {
-            offset.x = x.saturating_sub(width).saturating_add(1)
+            offset.x = x.saturating_sub(width).saturating_add(1);
         }
     }
     fn move_cursor(&mut self, key: Key) {
@@ -119,13 +124,13 @@ impl Editor {
             }
             Key::Left => {
                 if x > 0 {
-                    x -= 1
+                    x -= 1;
                 } else if y > 0 {
                     y -= 1;
                     if let Some(row) = self.document.row(y) {
-                        x = row.len()
+                        x = row.len();
                     } else {
-                        x = 0
+                        x = 0;
                     }
                 }
             }
@@ -163,6 +168,7 @@ impl Editor {
         if x > width {
             x = width;
         }
+
         self.cursor_position = Position { x, y }
     }
     fn draw_welcome_message(&self) {
@@ -184,7 +190,7 @@ impl Editor {
     }
     fn draw_rows(&self) {
         let height = self.terminal.size().height;
-        for terminal_row in 0..height - 1 {
+        for terminal_row in 0..height {
             Terminal::clear_current_line();
             if let Some(row) = self.document.row(terminal_row as usize + self.offset.y) {
                 self.draw_row(row);
@@ -195,9 +201,39 @@ impl Editor {
             }
         }
     }
+    fn draw_status_bar(&self) {
+        let mut status;
+        let width = self.terminal.size().width as usize;
+        let mut file_name = "[No Name]".to_string();
+        if let Some(name) = &self.document.file_name {
+            file_name = name.clone();
+            file_name.truncate(20);
+        }
+        status = format!("{} - {} lines", file_name, self.document.len());
+
+        let line_indicator = format!(
+            "{}/{}",
+            self.cursor_position.y.saturating_add(1),
+            self.document.len()
+        );
+        let len = status.len() + line_indicator.len();
+        if width > len {
+            status.push_str(&" ".repeat(width - len));
+        }
+        status = format!("{}{}", status, line_indicator);
+        status.truncate(width);
+        Terminal::set_bg_color(STATUS_BG_COLOR);
+        Terminal::set_fg_color(STATUS_FG_COLOR);
+        println!("{}\r", status);
+        Terminal::reset_fg_color();
+        Terminal::reset_bg_color();
+    }
+    fn draw_message_bar(&self) {
+        Terminal::clear_current_line();
+    }
 }
 
 fn die(e: std::io::Error) {
     Terminal::clear_screen();
-    panic!("{}", e);
+    panic!("{}",e);
 }
