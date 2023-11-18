@@ -169,7 +169,7 @@ impl Editor {
                     self.status_message = StatusMessage::from(format!(
                         "WARNING! File has unsaved changes. Press Ctrl-Q {} more times to quit.",
                         self.quit_times
-                    ));
+                    ));;
                     self.quit_times -= 1;
                     return Ok(());
                 }
@@ -343,7 +343,8 @@ impl Editor {
         );
 
         let line_indicator = format!(
-            "{}/{}",
+            "{} | {}/{}",
+            self.document.file_type(),
             self.cursor_position.y.saturating_add(1),
             self.document.len()
         );
@@ -356,7 +357,7 @@ impl Editor {
         Terminal::set_fg_color(STATUS_FG_COLOR);
         println!("{}\r", status);
         Terminal::reset_fg_color();
-        Terminal::reset_bg_color();
+        Terminal::reset_bg_color();;
     }
     fn draw_message_bar(&self) {
         Terminal::clear_current_line();
