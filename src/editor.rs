@@ -57,8 +57,8 @@ impl Editor {
     }
     pub fn default() -> Self {
         let args: Vec<String> = env::args().collect();
-        let mut initial_status = 
-            String::from("HELP: Ctrl-S = save | Ctrl-Q = quit | Ctrl-F = find");
+        let mut initial_status =
+            String::from("HELP: Ctrl-F = find | Ctrl-S = save | Ctrl-Q = quit");
 
         let document = if let Some(file_name) = args.get(1) {
             let doc = Document::open(file_name);
@@ -103,7 +103,7 @@ impl Editor {
     }
     fn save(&mut self) {
         if self.document.file_name.is_none() {
-            let new_name = self.prompt("Save as: ").unwrap_or(None);
+            let new_name = self.prompt("Save as: ", |_, _, _| {}).unwrap_or(None);
             if new_name.is_none() {
                 self.status_message = StatusMessage::from("Save aborted.".to_string());
                 return;
@@ -125,19 +125,27 @@ impl Editor {
                     self.status_message = StatusMessage::from(format!(
                         "WARNING! File has unsaved changes. Press Ctrl-Q {} more times to quit.",
                         self.quit_times
-                    ));
+                    ));;
                     self.quit_times -= 1;
                     return Ok(());
                 }
                 self.should_quit = true
             }
             Key::Ctrl('s') => self.save(),
-            Key::Ctrl('f') =>{
-                if let Some(query) = self.prompt("Search: ").unwrap_or(None){
-                    if let Some(position) = self.document.find(&query[..]){
+            Key::Ctrl('f') => {
+                if let Some(query) = self
+                    .prompt("Search: ", |editor, _, query| {
+                        if let Some(position) = editor.document.find(&query) {
+                            editor.cursor_position = position;
+                            editor.scroll();
+                        }
+                    })
+                    .unwrap_or(None)
+                {
+                    if let Some(position) = self.document.find(&query[..]) {
                         self.cursor_position = position;
                     } else {
-                        self.status_message = StatusMessage::from(format!("Not Found :{}",query));
+                        self.status_message = StatusMessage::from(format!("Not found :{}.", query));
                     }
                 }
             }
@@ -320,7 +328,7 @@ impl Editor {
         Terminal::set_fg_color(STATUS_FG_COLOR);
         println!("{}\r", status);
         Terminal::reset_fg_color();
-        Terminal::reset_bg_color();;
+        Terminal::reset_bg_color();
     }
     fn draw_message_bar(&self) {
         Terminal::clear_current_line();
@@ -331,12 +339,16 @@ impl Editor {
             print!("{}", text);
         }
     }
-    fn prompt(&mut self, prompt: &str) -> Result<Option<String>, std::io::Error> {
+    fn prompt<C>(&mut self, prompt: &str, callback: C) -> Result<Option<String>, std::io::Error>
+    where
+        C: Fn(&mut Self, Key, &String),
+    {
         let mut result = String::new();
         loop {
             self.status_message = StatusMessage::from(format!("{}{}", prompt, result));
             self.refresh_screen()?;
-            match Terminal::read_key()? {
+            let key = Terminal::read_key()?;
+            match key {
                 Key::Backspace => result.truncate(result.len().saturating_sub(1)),
                 Key::Char('\n') => break,
                 Key::Char(c) => {
@@ -350,6 +362,7 @@ impl Editor {
                 }
                 _ => (),
             }
+            callback(self, key, &result);
         }
         self.status_message = StatusMessage::from(String::new());
         if result.is_empty() {
