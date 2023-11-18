@@ -104,6 +104,7 @@ impl Editor {
     fn save(&mut self) {
         if self.document.file_name.is_none() {
             let new_name = self.prompt("Save as: ", |_, _, _| {}).unwrap_or(None);
+            // 这里的闭包什么都不做
             if new_name.is_none() {
                 self.status_message = StatusMessage::from("Save aborted.".to_string());
                 return;
@@ -125,7 +126,7 @@ impl Editor {
                     self.status_message = StatusMessage::from(format!(
                         "WARNING! File has unsaved changes. Press Ctrl-Q {} more times to quit.",
                         self.quit_times
-                    ));;
+                    ));
                     self.quit_times -= 1;
                     return Ok(());
                 }
